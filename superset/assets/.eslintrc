@@ -40,6 +40,7 @@
     "react/no-string-refs": 0,
     "indent": 0,
     "no-multi-spaces": 0,
-    "padded-blocks": 0
+    "padded-blocks": 0,
+    "template-curly-spacing": 0
   }
 }
