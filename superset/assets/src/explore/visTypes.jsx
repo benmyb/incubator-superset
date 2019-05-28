@@ -64,8 +64,8 @@ export const sections = {
     {
       label: t('Advanced Analytics'),
       description: t('This section contains options ' +
-      'that allow for advanced analytical post processing ' +
-      'of query results'),
+        'that allow for advanced analytical post processing ' +
+        'of query results'),
       controlSetRows: [
         [<h1 className="section-header">{t('Moving Average')}</h1>],
         ['rolling_type', 'rolling_periods', 'min_periods'],
@@ -89,6 +89,219 @@ const timeGrainSqlaAnimationOverrides = {
 };
 
 export const visTypes = {
+  echarts_funnel: {
+    label: t('Funnel View'),
+    showOnExplore: true,
+    controlPanelSections: [
+      {
+        label: t('Query'),
+        expanded: true,
+        controlSetRows: [
+          ['metrics', 'groupby'],
+          ['timeseries_limit_metric', 'row_limit'],
+          ['order_desc'],
+          ['adhoc_filters'],
+        ],
+      },
+      {
+        label: t('Chart Options'),
+        controlSetRows: [
+          ['color_scheme'],
+        ],
+      },
+    ],
+    controlOverrides: {
+      metrics: {
+        description: t('Metrics to form funnel which are sensitive to order.'),
+      },
+    },
+  },
+
+  echarts_stack: {
+    label: t('Stack View'),
+    showOnExplore: true,
+    controlPanelSections: [
+      {
+        label: t('Query'),
+        expanded: true,
+        controlSetRows: [
+          ['metrics'],
+          ['groupby', 'thumbnail'],
+          ['timeseries_limit_metric', 'limit'],
+          ['order_desc'],
+          ['adhoc_filters'],
+        ],
+      },
+      {
+        label: t('Chart Options'),
+        controlSetRows: [
+          ['color_scheme'],
+          ['dshow_percent', 'pshow_percent'],
+          ['dshow_multi', 'pshow_multi'],
+          ['dshow_thumbnail', 'pshow_thumbnail'],
+          ['show_other'],
+        ],
+      },
+    ],
+    controlOverrides: {
+      limit: {
+        label: t('Top N'),
+        description: t('Top N of data.'),
+      },
+    },
+  },
+
+  echarts_line: {
+    label: t('Echarts Line View'),
+    showOnExplore: true,
+    controlPanelSections: [
+      {
+        label: t('Query'),
+        expanded: true,
+        controlSetRows: [
+          ['metrics'],
+          ['groupby'],
+          ['timeseries_limit_metric', 'limit'],
+          ['order_desc'],
+          ['adhoc_filters'],
+        ],
+      },
+      {
+        label: t('Chart Options'),
+        controlSetRows: [
+          ['color_scheme'],
+          ['number_format'],
+          ['show_other'],
+        ],
+      },
+    ],
+    controlOverrides: {
+      limit: {
+        label: t('Top N'),
+        description: t('Top N of data.'),
+      },
+    },
+  },
+
+  highcharts_stack: {
+    label: t('HighChart Stack View'),
+    showOnExplore: true,
+    controlPanelSections: [
+      {
+        label: t('Query'),
+        expanded: true,
+        controlSetRows: [
+          ['metrics'],
+          ['groupby'],
+          ['timeseries_limit_metric', 'limit'],
+          ['order_desc'],
+          ['adhoc_filters'],
+        ],
+      },
+      {
+        label: t('Chart Options'),
+        controlSetRows: [
+          ['color_scheme'],
+        ],
+      },
+    ],
+    controlOverrides: {
+      limit: {
+        label: t('Top N'),
+        description: t('Top N of data.'),
+      },
+    },
+  },
+
+  echarts_multiline: {
+    label: t('MultiLine View'),
+    showOnExplore: true,
+    controlPanelSections: [
+      {
+        label: t('Query'),
+        expanded: true,
+        controlSetRows: [
+          ['metrics'],
+          ['percent_metrics'],
+          ['groupby'],
+          ['subchart_limit', 'row_limit'],
+          ['markers'],
+          ['row_number'],
+          ['groupby_orderdesc'],
+          ['adhoc_filters'],
+        ],
+      },
+      {
+        label: t('Chart Options'),
+        controlSetRows: [
+          ['color_scheme'],
+          ['number_format', 'y_axis_2_format'],
+          ['show_enlarge'],
+        ],
+      },
+      sections.NVD3TimeSeries[1],
+    ],
+    controlOverrides: {
+      metrics: {
+        description: t('Metrics in left yaxis in every sub chart.'),
+      },
+      percent_metrics: {
+        label: t('Metrics right yaxis'),
+        description: t('Metrics in right yaxis in every sub chart.'),
+      },
+      markers: {
+        label: t('Order of groupby'),
+        description: t('Manually specify the order of groupby value, accepted format: ["A", "B", "C"]. ' +
+          'Use a-z,0-9 if blank.'),
+      },
+    },
+  },
+
+  plotly_multiline: {
+    label: t('Poltly MultiLine View'),
+    showOnExplore: true,
+    controlPanelSections: [
+      {
+        label: t('Query'),
+        expanded: true,
+        controlSetRows: [
+          ['metrics'],
+          ['percent_metrics'],
+          ['groupby'],
+          ['subchart_limit', 'row_limit'],
+          ['markers'],
+          ['row_number'],
+          ['groupby_orderdesc'],
+          ['adhoc_filters'],
+        ],
+      },
+      {
+        label: t('Chart Options'),
+        controlSetRows: [
+          ['color_scheme'],
+          ['number_format', 'y_axis_2_format'],
+          ['date_time_format'],
+          ['show_enlarge'],
+        ],
+      },
+      sections.NVD3TimeSeries[1],
+    ],
+    controlOverrides: {
+      metrics: {
+        description: t('Metrics in left yaxis in every sub chart.'),
+      },
+      percent_metrics: {
+        label: t('Metrics right yaxis'),
+        description: t('Metrics in right yaxis in every sub chart.'),
+      },
+      markers: {
+        label: t('Order of groupby'),
+        description: t('Manually specify the order of groupby value, accepted format: ["A", "B", "C"]. ' +
+          'Use a-z,0-9 if blank.'),
+      },
+    },
+  },
+
   dist_bar: {
     label: t('Distribution - Bar Chart'),
     showOnExplore: true,
@@ -658,7 +871,7 @@ export const visTypes = {
     controlOverrides: {
       size: {
         label: t('Weight'),
-        description: t("Metric used as a weight for the grid's coloring"),
+        description: t('Metric used as a weight for the grid\'s coloring'),
         validators: [v.nonEmpty],
       },
       time_grain_sqla: timeGrainSqlaAnimationOverrides,
@@ -1001,7 +1214,7 @@ export const visTypes = {
       },
       url: {
         description: t(
-          "Templated link, it's possible to include {{ metric }} " +
+          'Templated link, it\'s possible to include {{ metric }} ' +
           'or other values coming from the controls.'),
       },
     },
@@ -1063,10 +1276,10 @@ export const visTypes = {
     controlOverrides: {
       code: {
         default: '####Section Title\n' +
-        'A paragraph describing the section' +
-        'of the dashboard, right before the separator line ' +
-        '\n\n' +
-        '---------------',
+          'A paragraph describing the section' +
+          'of the dashboard, right before the separator line ' +
+          '\n\n' +
+          '---------------',
       },
     },
   },
@@ -1396,8 +1609,8 @@ export const visTypes = {
         label: t('Secondary Metric'),
         default: null,
         description: t('[optional] this secondary metric is used to ' +
-        'define the color as a ratio against the primary metric. ' +
-        'When omitted, the color is categorical and based on labels'),
+          'define the color as a ratio against the primary metric. ' +
+          'When omitted, the color is categorical and based on labels'),
       },
       groupby: {
         label: t('Hierarchy'),
@@ -1904,21 +2117,23 @@ export function sectionsToRender(vizType, datasourceType) {
 
   const sectionsCopy = { ...sections };
   if (viz.sectionOverrides) {
-    Object.entries(viz.sectionOverrides).forEach(([section, overrides]) => {
-      if (typeof overrides === 'object' && overrides.constructor === Object) {
-        sectionsCopy[section] = {
-          ...sectionsCopy[section],
-          ...overrides,
-        };
-      } else {
-        sectionsCopy[section] = overrides;
-      }
-    });
+    Object.entries(viz.sectionOverrides)
+      .forEach(([section, overrides]) => {
+        if (typeof overrides === 'object' && overrides.constructor === Object) {
+          sectionsCopy[section] = {
+            ...sectionsCopy[section],
+            ...overrides,
+          };
+        } else {
+          sectionsCopy[section] = overrides;
+        }
+      });
   }
 
   return [].concat(
     sectionsCopy.datasourceAndVizType,
     datasourceType === 'table' ? sectionsCopy.sqlaTimeSeries : sectionsCopy.druidTimeSeries,
     viz.controlPanelSections,
-  ).filter(section => section);
+  )
+    .filter(section => section);
 }

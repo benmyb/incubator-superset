@@ -1,3 +1,4 @@
+/* eslint no-console: "off" */
 import React from 'react';
 import PropTypes from 'prop-types';
 import VirtualizedSelect from 'react-virtualized-select';
@@ -123,7 +124,7 @@ class FilterBox extends React.Component {
               label={t('Time range')}
               description={t('Select start and end date')}
               onChange={(...args) => { this.changeFilter(TIME_RANGE, ...args); }}
-              value={this.state.selectedValues[TIME_RANGE]}
+              value={this.state.selectedValues[TIME_RANGE] || 'No filter'}
             />
           </div>
         </div>
@@ -178,12 +179,14 @@ class FilterBox extends React.Component {
     // Add created options to filtersChoices, even though it doesn't exist,
     // or these options will exist in query sql but invisible to end user.
     Object.keys(selectedValues)
-      .filter(key => !selectedValues.hasOwnProperty(key)
-        || !(key in filtersChoices))
+      .filter(key => selectedValues.hasOwnProperty(key) && (key in filtersChoices))
       .forEach((key) => {
-        const choices = filtersChoices[key];
+        const choices = filtersChoices[key] || [];
         const choiceIds = new Set(choices.map(f => f.id));
-        selectedValues[key]
+        const selectedValuesForKey = Array.isArray(selectedValues[key])
+          ? selectedValues[key]
+          : [selectedValues[key]];
+        selectedValuesForKey
           .filter(value => !choiceIds.has(value))
           .forEach((value) => {
             choices.unshift({
@@ -194,7 +197,6 @@ class FilterBox extends React.Component {
             });
           });
       });
-
     return filtersFields.map(({ key, label }) => {
       const data = filtersChoices[key];
       const max = Math.max(...data.map(d => d.metric));
