@@ -492,6 +492,662 @@ class BaseViz(object):
         return json.dumps(self.data)
 
 
+class EchartsFunnelViz(BaseViz):
+    """ Funnel Chart"""
+    viz_type = 'echarts_funnel'
+    verbose_name = _('Echarts Funnel View')
+    is_timeseries = False
+
+    def query_obj(self):
+        d = super(EchartsFunnelViz, self).query_obj()
+        fd = self.form_data
+        if fd.get('all_columns') and (fd.get('groupby') or fd.get('metrics')):
+            raise Exception(_(
+                'Choose either fields to [Group By] and [Metrics] or '
+                '[Columns], not both'))
+
+        return d
+
+    def get_data(self, df):
+        fd = self.form_data
+        metric = self.metric_labels
+        groupby = self.groupby
+        df1 = df.pivot_table(
+            index=groupby,
+            values=metric)
+        df1 = df1.reset_index()
+        df1 = df1[groupby + metric]
+        sortby = metric[0]
+        if fd.get('timeseries_limit_metric'):
+            sortby = fd.get('timeseries_limit_metric')
+        df1 = df1.sort_values(by=sortby, ascending=not fd.get('order_desc', True))
+        groupby_col_list = df1[groupby[0]].tolist()
+        df2 = df1[groupby].copy()
+        df1 = df1.filter(items=metric)
+        prev_col = ''
+        percent_col_name = []
+        for col in df1:
+            if prev_col == '':
+                prev_col = col
+                continue
+            else:
+                name = col + '/' + prev_col
+                percent_col_name.append(name)
+                df2[name] = df1[col] / df1[prev_col]
+                prev_col = col
+
+        def func(x):
+            if not (math.isnan(x) or math.isinf(x)):
+                return int(x * 10000) / 100
+
+        df2 = df2.filter(items=percent_col_name).applymap(func)
+        return dict(
+            sortby=sortby,
+            col_index=groupby_col_list,
+            raw_data_col=df1.columns.values.tolist(),
+            raw_data=df1.values.tolist(),
+            percent_col=df2.columns.values.tolist(),
+            percent_data=df2.values.tolist()
+        )
+
+
+class EchartsStackViz(BaseViz):
+    """ Stack Chart"""
+    viz_type = 'echarts_stack'
+    verbose_name = _('Echarts Stack View')
+    is_timeseries = True
+
+    def to_series(self, df, classed='', title_suffix=''):
+        cols = []
+        for col in df.columns:
+            if col == '':
+                cols.append('N/A')
+            elif col is None:
+                cols.append('NULL')
+            else:
+                cols.append(col)
+        df.columns = cols
+        series = df.to_dict('series')
+
+        chart_data = []
+        dft = df.T
+        dfn = dft.sort_values(by=dft.columns.tolist(), ascending=False)
+        for name in dfn.index.tolist():
+            ys = series[name]
+            if df[name].dtype.kind not in 'biufc':
+                continue
+            if isinstance(name, list):
+                series_title = [str(title) for title in name]
+            elif isinstance(name, tuple):
+                series_title = tuple(str(title) for title in name)
+            else:
+                series_title = str(name)
+            if (
+                    isinstance(series_title, (list, tuple)) and
+                    len(series_title) > 1 and
+                    len(self.metric_labels) == 1):
+                # Removing metric from series name if only one metric
+                series_title = series_title[1:]
+            if title_suffix:
+                if isinstance(series_title, str):
+                    series_title = (series_title, title_suffix)
+                elif isinstance(series_title, (list, tuple)):
+                    series_title = series_title + (title_suffix,)
+
+            values = []
+            for ds in df.index:
+                if ds in ys:
+                    d = {
+                        'x': ds,
+                        'y': ys[ds],
+                    }
+                else:
+                    d = {}
+                values.append(d)
+
+            d = {
+                'key': series_title,
+                'values': values,
+            }
+            if classed:
+                d['classed'] = classed
+            chart_data.append(d)
+        return chart_data
+
+    def process_data(self, df, aggregate=False):
+        fd = self.form_data
+        df = df.fillna(0)
+        if fd.get('granularity') == 'all':
+            raise Exception(_('Pick a time granularity for your time series'))
+        if not aggregate:
+            df = df.pivot_table(
+                index=DTTM_ALIAS,
+                columns=fd.get('groupby'),
+                fill_value=0.0,
+                values=utils.get_metric_names(fd.get('metrics')))
+        else:
+            df = df.pivot_table(
+                index=DTTM_ALIAS,
+                columns=fd.get('groupby'),
+                values=utils.get_metric_names(fd.get('metrics')),
+                fill_value=0,
+                aggfunc=sum)
+        return df
+
+    def query_obj(self):
+        d = super(EchartsStackViz, self).query_obj()
+        fd = self.form_data
+
+        if fd.get('all_columns') and (fd.get('groupby') or fd.get('metrics')):
+            raise Exception(_(
+                'Choose either fields to [Group By] and [Metrics] or '
+                '[Columns], not both'))
+
+        if len(fd.get('thumbnail')) > 1:
+            raise Exception(_(
+                'Thumbnail more than one column'))
+
+        sort_by = fd.get('timeseries_limit_metric') or []
+        if fd.get('all_columns'):
+            d['columns'] = fd.get('all_columns')
+            d['groupby'] = []
+            order_by_cols = fd.get('order_by_cols') or []
+            d['orderby'] = [json.loads(t) for t in order_by_cols]
+        elif sort_by:
+            sort_by_label = utils.get_metric_name(sort_by)
+            if sort_by_label not in utils.get_metric_names(d['metrics']):
+                d['metrics'] += [sort_by]
+            d['orderby'] = [(sort_by, not fd.get('order_desc', True))]
+
+        return d
+
+    def run_extra_queries(self):
+        query_object = self.query_obj()
+        query_object['timeseries_limit'] = 0
+        query_object['groupby'] = []
+        df2 = self.get_df_payload(query_object).get('df')
+        fd = self.form_data
+        metric = self.metric_labels
+        df2 = df2.fillna(0)
+        df2 = df2.pivot_table(
+            index=DTTM_ALIAS,
+            columns=None,
+            fill_value=0.0,
+            values=metric)
+        self._extra_chart_data.extend(self.to_series(df2, title_suffix='other'))
+
+    def get_data(self, df):
+        df = self.process_data(df)
+        d = self.to_series(df)
+        if self._extra_chart_data:
+            d = self._extra_chart_data + d
+        series_data = pd.DataFrame(d[0]['values'])
+        series_data = series_data.drop(columns=['y'])
+        other_dict = {}
+        groupby_name = []
+        for key_value in d:
+            col = ', '.join(key_value['key'])
+            key_value_df = pd.DataFrame(key_value['values'])
+            series_data[col] = key_value_df['y']
+            if 'other' in key_value['key']:
+                other_dict[key_value['key'][0]] = col
+            else:
+                other = ''
+                for v in list(key_value['key']):
+                    if v in self.metric_labels:
+                        other = other_dict[v]
+                    else:
+                        groupby_name.append(v)
+                if other is '':
+                    other = list(other_dict.values())[0]
+                series_data[other] = series_data[other].sub(key_value_df['y'], fill_value=0)
+
+        series_data.set_index(['x'], inplace=True)
+        series_data = series_data[series_data.apply(sum).sort_values(ascending=True).keys().tolist()]
+        dont_show_other = not self.form_data.get('show_other') or (self.form_data.get('limit') or 10000) + 1 > len(series_data.columns.values.tolist())
+        if dont_show_other:
+            series_data.drop(columns=list(other_dict.values()), inplace=True)
+        percent_data = series_data.T.apply(lambda x: ((x / x.sum()) * 10000) / 100).T.fillna(0)
+        series_data.reset_index(0, inplace=True)
+        series_data = series_data.fillna(0)
+        percent_data.reset_index(0, inplace=True)
+        series_data.rename(columns={'x': 'timestamp'}, inplace=True)
+        col = series_data.columns.values.tolist()
+        pic_data = {}
+        if self.form_data.get('thumbnail'):
+            thumbnail = self.form_data.get('thumbnail')
+            key = self.form_data.get('groupby')[0]
+            query_object = self.query_obj()
+            query_object['groupby'] += thumbnail
+            query_object['filter'] = [{
+                'col': key,
+                'op': 'in',
+                'val': groupby_name
+            }]
+            query_object['metrics'] = []
+            picdf = self.get_df_payload(query_object).get('df')
+            picdf.drop_duplicates(key, keep='first', inplace=True)
+            picdf = picdf.drop(columns=['__timestamp'])
+            picdf.set_index(key, inplace=True)
+            pic_data = picdf.to_dict()[thumbnail[0]]
+
+        def is_neg(s):
+            try:
+                return int(s) < 0
+            except ValueError:
+                return False
+
+        col = [c.replace('-', 'neg ') if is_neg(c) else c for c in col]
+        d_list = [col]
+        d_list += series_data.values.tolist()
+        p_list = [col]
+        p_list += percent_data.values.tolist()
+        return dict(
+            raw_data=d_list,
+            percent_data=p_list,
+            pic_data=pic_data,
+        )
+
+
+class EchartsLineViz(BaseViz):
+    """ Line Chart"""
+    viz_type = 'echarts_line'
+    verbose_name = _('Echarts line View')
+    is_timeseries = True
+
+    def to_series(self, df, classed='', title_suffix=''):
+        cols = []
+        for col in df.columns:
+            if col == '':
+                cols.append('N/A')
+            elif col is None:
+                cols.append('NULL')
+            else:
+                cols.append(col)
+        df.columns = cols
+        series = df.to_dict('series')
+
+        chart_data = []
+        dft = df.T
+        dfn = dft.sort_values(by=dft.columns.tolist(), ascending=False)
+        for name in dfn.index.tolist():
+            ys = series[name]
+            if df[name].dtype.kind not in 'biufc':
+                continue
+            if isinstance(name, list):
+                series_title = [str(title) for title in name]
+            elif isinstance(name, tuple):
+                series_title = tuple(str(title) for title in name)
+            else:
+                series_title = str(name)
+            if (
+                    isinstance(series_title, (list, tuple)) and
+                    len(series_title) > 1 and
+                    len(self.metric_labels) == 1):
+                # Removing metric from series name if only one metric
+                series_title = series_title[1:]
+            if title_suffix:
+                if isinstance(series_title, str):
+                    series_title = (series_title, title_suffix)
+                elif isinstance(series_title, (list, tuple)):
+                    series_title = series_title + (title_suffix,)
+
+            values = []
+            for ds in df.index:
+                if ds in ys:
+                    d = {
+                        'x': ds,
+                        'y': ys[ds],
+                    }
+                else:
+                    d = {}
+                values.append(d)
+
+            d = {
+                'key': series_title,
+                'values': values,
+            }
+            if classed:
+                d['classed'] = classed
+            chart_data.append(d)
+        return chart_data
+
+    def process_data(self, df, aggregate=False):
+        fd = self.form_data
+        df = df.fillna(0)
+        if fd.get('granularity') == 'all':
+            raise Exception(_('Pick a time granularity for your time series'))
+        if not aggregate:
+            df = df.pivot_table(
+                index=DTTM_ALIAS,
+                columns=fd.get('groupby'),
+                fill_value=0.0,
+                values=utils.get_metric_names(fd.get('metrics')))
+        else:
+            df = df.pivot_table(
+                index=DTTM_ALIAS,
+                columns=fd.get('groupby'),
+                values=utils.get_metric_names(fd.get('metrics')),
+                fill_value=0,
+                aggfunc=sum)
+        return df
+
+    def query_obj(self):
+        d = super(EchartsLineViz, self).query_obj()
+        fd = self.form_data
+        if fd.get('adhoc_filters') and len(self.form_data.get('groupby')) == 1:
+            for filter_values in fd.get('adhoc_filters'):
+                if d['timeseries_limit'] < len(filter_values['comparator']):
+                    d['timeseries_limit'] = len(filter_values['comparator'])
+
+        if fd.get('all_columns') and (fd.get('groupby') or fd.get('metrics')):
+            raise Exception(_(
+                'Choose either fields to [Group By] and [Metrics] or '
+                '[Columns], not both'))
+
+        sort_by = fd.get('timeseries_limit_metric') or []
+        if fd.get('all_columns'):
+            d['columns'] = fd.get('all_columns')
+            d['groupby'] = []
+            order_by_cols = fd.get('order_by_cols') or []
+            d['orderby'] = [json.loads(t) for t in order_by_cols]
+        elif sort_by:
+            sort_by_label = utils.get_metric_name(sort_by)
+            if sort_by_label not in utils.get_metric_names(d['metrics']):
+                d['metrics'] += [sort_by]
+            d['orderby'] = [(sort_by, not fd.get('order_desc', True))]
+
+        return d
+
+    def run_extra_queries(self):
+        query_object = self.query_obj()
+        query_object['timeseries_limit'] = 0
+        query_object['groupby'] = []
+        df2 = self.get_df_payload(query_object).get('df')
+        fd = self.form_data
+        metric = self.metric_labels
+        df2 = df2.fillna(0)
+        df2 = df2.pivot_table(
+            index=DTTM_ALIAS,
+            columns=None,
+            fill_value=0.0,
+            values=metric)
+        self._extra_chart_data.extend(self.to_series(df2, title_suffix='other'))
+
+    def get_data(self, df):
+        df = self.process_data(df)
+        d = self.to_series(df)
+        if self._extra_chart_data:
+            d = self._extra_chart_data + d
+        series_data = pd.DataFrame(d[0]['values'])
+        series_data = series_data.drop(columns=['y'])
+        other_dict = {}
+        groupby_name = []
+        for key_value in d:
+            col = ', '.join(key_value['key'])
+            key_value_df = pd.DataFrame(key_value['values'])
+            series_data[col] = key_value_df['y']
+            if 'other' in key_value['key']:
+                other_dict[key_value['key'][0]] = col
+            else:
+                other = ''
+                for v in list(key_value['key']):
+                    if v in self.metric_labels:
+                        other = other_dict[v]
+                    else:
+                        groupby_name.append(v)
+                if other is '':
+                    other = list(other_dict.values())[0]
+                series_data[other] = series_data[other].sub(key_value_df['y'], fill_value=0)
+        series_data.set_index(['x'], inplace=True)
+        dont_show_other = not self.form_data.get('show_other') or (self.form_data.get('limit') or 10000) + 1 > len(series_data.columns.values.tolist())
+        if dont_show_other:
+            series_data.drop(columns=list(other_dict.values()), inplace=True)
+        series_data.reset_index(0, inplace=True)
+        series_data = series_data.fillna(0)
+        series_data.rename(columns={'x': 'timestamp'}, inplace=True)
+        col = series_data.columns.values.tolist()
+
+        def is_neg(s):
+            try:
+                return int(s) < 0
+            except ValueError:
+                return False
+
+        col = [c.replace('-', 'neg ') if is_neg(c) else c for c in col]
+        d_list = [col]
+        d_list += series_data.values.tolist()
+        return d_list
+
+
+class PlotlyMultiLineViz(BaseViz):
+    """ Plotly MultiLine Chart"""
+    viz_type = 'plotly_multiline'
+    verbose_name = _('Plotly MultiLine View')
+    sort_series = False
+    is_timeseries = True
+
+    def to_series(self, df, classed='', title_suffix=''):
+        cols = []
+        for col in df.columns:
+            if col == '':
+                cols.append('N/A')
+            elif col is None:
+                cols.append('NULL')
+            else:
+                cols.append(col)
+        df.columns = cols
+        series = df.to_dict('series')
+
+        chart_data = []
+        for name in df.T.index.tolist():
+            ys = series[name]
+            if df[name].dtype.kind not in 'biufc':
+                continue
+            if isinstance(name, list):
+                series_title = [str(title) for title in name]
+            elif isinstance(name, tuple):
+                series_title = tuple(str(title) for title in name)
+            else:
+                series_title = str(name)
+            if title_suffix:
+                if isinstance(series_title, str):
+                    series_title = (series_title, title_suffix)
+                elif isinstance(series_title, (list, tuple)):
+                    series_title = series_title + (title_suffix,)
+
+            values = []
+            for ds in df.index:
+                if ds in ys:
+                    d = {
+                        'x': ds,
+                        'y': ys[ds],
+                    }
+                else:
+                    d = {}
+                values.append(d)
+
+            d = {
+                'key': series_title,
+                'values': values,
+            }
+            if classed:
+                d['classed'] = classed
+            chart_data.append(d)
+        return chart_data
+
+    def process_data(self, df, aggregate=False):
+        fd = self.form_data
+        df = df.fillna(0)
+        if fd.get('granularity') == 'all':
+            raise Exception(_('Pick a time granularity for your time series'))
+        if not aggregate:
+            df = df.pivot_table(
+                index=DTTM_ALIAS,
+                columns=fd.get('groupby'),
+                values=self.metric_labels)
+        else:
+            df = df.pivot_table(
+                index=DTTM_ALIAS,
+                columns=fd.get('groupby'),
+                values=self.metric_labels,
+                fill_value=0,
+                aggfunc=sum)
+
+        fm = fd.get('resample_fillmethod')
+        if not fm:
+            fm = None
+        how = fd.get('resample_how')
+        rule = fd.get('resample_rule')
+        if how and rule:
+            df = df.resample(rule, how=how, fill_method=fm)
+            if not fm:
+                df = df.fillna(0)
+
+        if self.sort_series:
+            dfs = df.sum()
+            dfs.sort_values(ascending=False, inplace=True)
+            df = df[dfs.index]
+
+        if fd.get('contribution'):
+            dft = df.T
+            df = (dft / dft.sum()).T
+
+        rolling_type = fd.get('rolling_type')
+        rolling_periods = int(fd.get('rolling_periods') or 0)
+        min_periods = int(fd.get('min_periods') or 0)
+
+        if rolling_type in ('mean', 'std', 'sum') and rolling_periods:
+            kwargs = dict(
+                window=rolling_periods,
+                min_periods=min_periods)
+            if rolling_type == 'mean':
+                df = df.rolling(**kwargs).mean()
+            elif rolling_type == 'std':
+                df = df.rolling(**kwargs).std()
+            elif rolling_type == 'sum':
+                df = df.rolling(**kwargs).sum()
+        elif rolling_type == 'cumsum':
+            df = df.cumsum()
+        if min_periods:
+            df = df[min_periods:]
+
+        return df
+
+    def run_extra_queries(self):
+        fd = self.form_data
+
+        time_compare = fd.get('time_compare') or []
+        # backwards compatibility
+        if not isinstance(time_compare, list):
+            time_compare = [time_compare]
+
+        for option in time_compare:
+            query_object = self.query_obj()
+            delta = utils.parse_human_timedelta(option)
+            query_object['inner_from_dttm'] = query_object['from_dttm']
+            query_object['inner_to_dttm'] = query_object['to_dttm']
+
+            if not query_object['from_dttm'] or not query_object['to_dttm']:
+                raise Exception(_(
+                    '`Since` and `Until` time bounds should be specified '
+                    'when using the `Time Shift` feature.'))
+            query_object['from_dttm'] -= delta
+            query_object['to_dttm'] -= delta
+
+            df2 = self.get_df_payload(query_object, time_compare=option).get('df')
+            if df2 is not None and DTTM_ALIAS in df2:
+                label = '{} offset'. format(option)
+                df2[DTTM_ALIAS] += delta
+                df2 = self.process_data(df2)
+                self._extra_chart_data.append((label, df2))
+
+    def query_obj(self):
+        d = super(PlotlyMultiLineViz, self).query_obj()
+        fd = self.form_data
+        m1 = fd.get('metrics')
+        m2 = fd.get('percent_metrics')
+        d['metrics'] = m1 + m2
+        if fd.get('all_columns') and (fd.get('groupby') or d['metrics']):
+            raise Exception(_(
+                'Choose either fields to [Group By] and [Metrics] or '
+                '[Columns], not both'))
+
+        return d
+
+    def get_data(self, df):
+        fd = self.form_data
+        comparison_type = fd.get('comparison_type') or 'values'
+        df1 = self.process_data(df)
+
+        if comparison_type == 'values':
+            chart_data = self.to_series(df1)
+            for i, (label, df2) in enumerate(self._extra_chart_data):
+                chart_data.extend(
+                    self.to_series(
+                        df2, classed='time-shift-{}'.format(i), title_suffix=label))
+        else:
+            chart_data = []
+            for i, (label, df2) in enumerate(self._extra_chart_data):
+                # reindex df2 into the df2 index
+                combined_index = df.index.union(df2.index)
+                df2 = df2.reindex(combined_index) \
+                    .interpolate(method='time') \
+                    .reindex(df.index)
+
+                if comparison_type == 'absolute':
+                    diff = df1 - df2
+                elif comparison_type == 'percentage':
+                    diff = (df1 - df2) / df2
+                elif comparison_type == 'ratio':
+                    diff = df1 / df2
+                else:
+                    raise Exception(
+                        'Invalid `comparison_type`: {0}'.format(comparison_type))
+
+                # remove leading/trailing NaNs from the time shift difference
+                diff = diff[diff.first_valid_index():diff.last_valid_index()]
+
+                chart_data.extend(
+                    self.to_series(
+                        diff, classed='time-shift-{}'.format(i), title_suffix=label))
+        all_data = {}
+        for series in chart_data:
+            groupby = series['key'][1]
+            metric = series['key'][0]
+            values = []
+            if 'classed' in series:
+                metric += ',' + series['key'][2]
+            values.append([dataxy['x'] for dataxy in series['values']])
+            values.append([dataxy['y'] for dataxy in series['values']])
+            if groupby not in all_data:
+                all_data[groupby] = {metric: values}
+            else:
+                all_data[groupby][metric] = values
+
+        subchart_limit = fd.get('subchart_limit')
+        order_str = fd.get('markers')
+        if order_str:
+            import ast
+            groupby_order = ast.literal_eval(fd.get('markers'))[0:subchart_limit]
+        else:
+            groupby_order = list(all_data.keys())[0:subchart_limit]
+        raw_data = {}
+        metrics = []
+        for groupby_value in groupby_order:
+            raw_data[groupby_value] = all_data[groupby_value]
+            if len(metrics) < len(list(all_data[groupby_value].keys())):
+                metrics = list(all_data[groupby_value].keys())
+        metrics_2 = fd.get('percent_metrics') or []
+        metrics_2 = [utils.get_metric_name(m) for m in metrics_2]
+        return dict(
+            metrics=metrics,
+            metrics_2=metrics_2,
+            groupby_order=groupby_order,
+            raw_data=raw_data,
+        )
+
+
 class TableViz(BaseViz):
 
     """A basic html table that is sortable and searchable"""

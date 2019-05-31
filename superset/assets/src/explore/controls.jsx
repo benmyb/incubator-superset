@@ -2332,5 +2332,104 @@ export const controls = {
     description: t('Whether to normalize the histogram'),
     default: false,
   },
+
+  thumbnail: Object.assign({}, groupByControl, {
+    label: t('Thumbnail'),
+    description: t('Select a column for series thumbnail'),
+  }),
+
+  pshow_percent: {
+    type: 'CheckboxControl',
+    label: t('Percent view'),
+    renderTrigger: true,
+    description: t('Whether to show percent view button in echarts stack view'),
+    default: false,
+  },
+
+  pshow_multi: {
+    type: 'CheckboxControl',
+    label: t('Multi series'),
+    renderTrigger: true,
+    description: t('Whether to show multi series button in echarts stack view'),
+    default: false,
+  },
+
+  pshow_thumbnail: {
+    type: 'CheckboxControl',
+    label: t('Thumbnail'),
+    renderTrigger: true,
+    description: t('Whether to show thumbnail button in echarts stack view'),
+    default: false,
+  },
+
+  dshow_percent: {
+    type: 'CheckboxControl',
+    label: t('Default to percent view'),
+    renderTrigger: true,
+    description: t('Whether to show percent view as default'),
+    default: false,
+  },
+
+  dshow_multi: {
+    type: 'CheckboxControl',
+    label: t('Default to multi tooltip'),
+    renderTrigger: true,
+    description: t('Whether to show multi tooltip as default'),
+    default: false,
+  },
+
+  dshow_thumbnail: {
+    type: 'CheckboxControl',
+    label: t('Default to show thumbnail'),
+    renderTrigger: true,
+    description: t('Whether to show thumbnail as default'),
+    default: false,
+  },
+
+  subchart_limit: {
+    type: 'SelectControl',
+    freeForm: true,
+    label: t('Subchart limit'),
+    validators: [v.integer],
+    choices: formatSelectOptions(SERIES_LIMITS),
+    default: 5,
+    description: t(
+      'Limits the number of groupby values which are the number of sub charts'),
+  },
+
+  row_number: {
+    type: 'SelectControl',
+    freeForm: true,
+    label: t('Subchart number of row'),
+    validators: [v.integer],
+    choices: formatSelectOptions(SERIES_LIMITS),
+    default: 3,
+    description: t(
+      'Limits the number of subchart in one row'),
+  },
+
+  groupby_orderdesc: {
+    type: 'CheckboxControl',
+    label: t('Group by order desc'),
+    renderTrigger: false,
+    description: t('Whether to reverse groupby order'),
+    default: false,
+  },
+
+  show_enlarge: {
+    type: 'CheckboxControl',
+    label: t('Show enlarge button'),
+    renderTrigger: true,
+    description: t('Whether to show enlarge button in echarts multiLine'),
+    default: false,
+  },
+
+  show_other: {
+    type: 'CheckboxControl',
+    label: t('Show other'),
+    renderTrigger: false,
+    description: t('Whether to show other as legend in echarts stack'),
+    default: true,
+  },
 };
 export default controls;

@@ -35,6 +35,10 @@ import SankeyChartPlugin from '@superset-ui/legacy-plugin-chart-sankey';
 // Not '@superset-ui/legacy-preset-chart-nvd3',
 // which will point to '@superset-ui/legacy-preset-chart-nvd3/esm' by default
 import { BulletChartPlugin, CompareChartPlugin, DualLineChartPlugin, LineMultiChartPlugin, TimePivotChartPlugin } from '@superset-ui/legacy-preset-chart-nvd3/lib';
+import EchartsFunnelPlugin from '../EchartsFunnel/index';
+import EchartsLinePlugin from '../EchartsLine/index';
+import EchartsStackPlugin from '../EchartsStack/index';
+import PlotlyMultiLinePlugin from '../PlotlyMultiLine/index';
 
 import CommonChartPreset from './CommonChartPreset';
 import DeckGLChartPreset from './DeckGLChartPreset';
@@ -58,6 +62,10 @@ export default class LegacyChartPreset extends Preset {
         new CompareChartPlugin().configure({ key: 'compare' }),
         new DualLineChartPlugin().configure({ key: 'dual_line' }),
         new EventFlowChartPlugin().configure({ key: 'event_flow' }),
+        new EchartsFunnelPlugin().configure({ key: 'echarts_funnel' }),
+        new EchartsLinePlugin().configure({ key: 'echarts_line' }),
+        new EchartsStackPlugin().configure({ key: 'echarts_stack' }),
+        new PlotlyMultiLinePlugin().configure({ key: 'plotly_multiline' }),
         new ForceDirectedChartPlugin().configure({ key: 'directed_force' }),
         new HeatmapChartPlugin().configure({ key: 'heatmap' }),
         new HorizonChartPlugin().configure({ key: 'horizon' }),

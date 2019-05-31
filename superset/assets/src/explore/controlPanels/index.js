@@ -39,6 +39,9 @@ import DirectedForce from './DirectedForce';
 import DistBar from './DistBar';
 import DualLine from './DualLine';
 import EventFlow from './EventFlow';
+import EchartsFunnel from './EchartsFunnel';
+import EchartsLine from './EchartsLine';
+import EchartsStack from './EchartsStack';
 import FilterBox from './FilterBox';
 import Heatmap from './Heatmap';
 import Histogram from './Histogram';
@@ -53,6 +56,7 @@ import Para from './Para';
 import Partition from './Partition';
 import Pie from './Pie';
 import PivotTable from './PivotTable';
+import PlotlyMultiline from './PlotlyMultiline';
 import Rose from './Rose';
 import Sankey from './Sankey';
 import Sunburst from './Sunburst';
@@ -89,6 +93,9 @@ export const controlPanelConfigs = extraOverrides({
   dist_bar: DistBar,
   dual_line: DualLine,
   event_flow: EventFlow,
+  echarts_funnel: EchartsFunnel,
+  echarts_line: EchartsLine,
+  echarts_stack: EchartsStack,
   filter_box: FilterBox,
   heatmap: Heatmap,
   histogram: Histogram,
@@ -103,6 +110,7 @@ export const controlPanelConfigs = extraOverrides({
   partition: Partition,
   pie: Pie,
   pivot_table: PivotTable,
+  plotly_multiline: PlotlyMultiline,
   rose: Rose,
   sankey: Sankey,
   separator: Separator,
