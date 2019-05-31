@@ -29,7 +29,7 @@ import sys
 
 from celery.schedules import crontab
 from dateutil import tz
-from flask_appbuilder.security.manager import AUTH_DB
+from flask_appbuilder.security.manager import AUTH_DB,AUTH_LDAP,AUTH_OID,AUTH_OAUTH
 
 from superset.stats_logger import DummyStatsLogger
 
@@ -64,7 +64,7 @@ SUPERSET_WEBSERVER_PORT = 8088
 # [load balancer / proxy / envoy / kong / ...] timeout settings.
 # You should also make sure to configure your WSGI server
 # (gunicorn, nginx, apache, ...) timeout setting to be <= to this setting
-SUPERSET_WEBSERVER_TIMEOUT = 60
+SUPERSET_WEBSERVER_TIMEOUT = 300
 
 SUPERSET_DASHBOARD_POSITION_DATA_LIMIT = 65535
 EMAIL_NOTIFICATIONS = False
@@ -141,6 +141,7 @@ DRUID_ANALYSIS_TYPES = ['cardinality']
 # AUTH_DB : Is for database (username/password()
 # AUTH_LDAP : Is for LDAP
 # AUTH_REMOTE_USER : Is for using REMOTE_USER from web server
+# AUTH_TYPE = AUTH_LDAP
 AUTH_TYPE = AUTH_DB
 
 # Uncomment to setup Full admin role name
@@ -150,13 +151,39 @@ AUTH_TYPE = AUTH_DB
 # AUTH_ROLE_PUBLIC = 'Public'
 
 # Will allow user self registration
-# AUTH_USER_REGISTRATION = True
+AUTH_USER_REGISTRATION = True
 
 # The default user self registration role
-# AUTH_USER_REGISTRATION_ROLE = "Public"
+# AUTH_USER_REGISTRATION_ROLE = "Gamma"
+AUTH_USER_REGISTRATION_ROLE = "Public"
 
 # When using LDAP Auth, setup the ldap server
-# AUTH_LDAP_SERVER = "ldap://ldapserver.new"
+# AUTH_LDAP_SERVER = "ldap://openldap.openldap.svc.cluster.local:389"
+# AUTH_LDAP_SEARCH = "OU=users,DC=eks,DC=com"
+# AUTH_LDAP_BIND_USER = "CN=admin,DC=eks,DC=com"
+# AUTH_LDAP_BIND_PASSWORD = "wkffhwzjTbITelPftza1bRn1x2uAIPBD"
+# AUTH_LDAP_USERNAME_FORMAT = "CN=%s,OU=users,DC=ft-eks,DC=com"
+
+# google oauth setting
+OAUTH_PROVIDERS = [
+  {
+    'name': 'google',
+    'whitelist': ['@i9i8.com'],
+    'icon': 'fa-google',
+    'token_key': 'access_token',
+    'remote_app': {
+      'base_url': 'https://www.googleapis.com/oauth2/v2/',
+      'request_token_params': {
+         'scope': 'email profile'
+      },
+      'request_token_url': None,
+      'access_token_url': 'https://accounts.google.com/o/oauth2/token',
+      'authorize_url': 'https://accounts.google.com/o/oauth2/auth',
+      'consumer_key': '817408275310-rnemngfghct3q09bd614ekkjk9okh7gf.apps.googleusercontent.com',
+      'consumer_secret': 'ZnxHkoowCUdtg0AAVzW_AgNU'
+      }
+  }
+]
 
 # Uncomment to setup OpenID providers example for OpenID authentication
 # OPENID_PROVIDERS = [
@@ -465,13 +492,13 @@ ENABLE_ACCESS_REQUEST = False
 
 # smtp server configuration
 EMAIL_NOTIFICATIONS = False  # all the emails are sent using dryrun
-SMTP_HOST = 'localhost'
+SMTP_HOST = 'email-smtp.us-east-1.amazonaws.com'
 SMTP_STARTTLS = True
 SMTP_SSL = False
-SMTP_USER = 'superset'
-SMTP_PORT = 25
-SMTP_PASSWORD = 'superset'
-SMTP_MAIL_FROM = 'superset@superset.com'
+SMTP_USER = 'AKIAI3DTNWDKO5KEBHJA'
+SMTP_PORT = 587
+SMTP_PASSWORD = 'Aji6cNopF+jOT6oGvw9zMrcNalTG5HElKy+AB7U1Z8mC'
+SMTP_MAIL_FROM = 'artemis-report@i9i8.com'
 
 if not CACHE_DEFAULT_TIMEOUT:
     CACHE_DEFAULT_TIMEOUT = CACHE_CONFIG.get('CACHE_DEFAULT_TIMEOUT')
@@ -544,7 +571,7 @@ SQL_QUERY_MUTATOR = None
 ENABLE_FLASK_COMPRESS = True
 
 # Enable / disable scheduled email reports
-ENABLE_SCHEDULED_EMAIL_REPORTS = False
+ENABLE_SCHEDULED_EMAIL_REPORTS = True
 
 # If enabled, certail features are run in debug mode
 # Current list:
@@ -552,11 +579,11 @@ ENABLE_SCHEDULED_EMAIL_REPORTS = False
 SCHEDULED_EMAIL_DEBUG_MODE = False
 
 # Email reports - minimum time resolution (in minutes) for the crontab
-EMAIL_REPORTS_CRON_RESOLUTION = 15
+EMAIL_REPORTS_CRON_RESOLUTION = 1
 
 # Email report configuration
 # From address in emails
-EMAIL_REPORT_FROM_ADDRESS = 'reports@superset.org'
+EMAIL_REPORT_FROM_ADDRESS = 'artemis-report@i9i8.com'
 
 # Send bcc of all reports to this address. Set to None to disable.
 # This is useful for maintaining an audit trail of all email deliveries.
@@ -588,7 +615,7 @@ WEBDRIVER_WINDOW = {
 WEBDRIVER_CONFIGURATION = {}
 
 # The base URL to query for accessing the user interface
-WEBDRIVER_BASEURL = 'http://0.0.0.0:8080/'
+WEBDRIVER_BASEURL = 'http://127.0.0.1:5000/'
 
 # Send user to a link where they can report bugs
 BUG_REPORT_URL = None
