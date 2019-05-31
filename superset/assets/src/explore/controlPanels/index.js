@@ -59,6 +59,7 @@ import PivotTable from './PivotTable';
 import PlotlyMultiline from './PlotlyMultiline';
 import Rose from './Rose';
 import Sankey from './Sankey';
+import SortTable from './SortTable';
 import Sunburst from './Sunburst';
 import Separator from './Separator';
 import Table from './Table';
@@ -113,6 +114,7 @@ export const controlPanelConfigs = extraOverrides({
   plotly_multiline: PlotlyMultiline,
   rose: Rose,
   sankey: Sankey,
+  sort_table: SortTable,
   separator: Separator,
   sunburst: Sunburst,
   table: Table,

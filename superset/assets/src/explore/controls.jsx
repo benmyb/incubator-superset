@@ -2431,5 +2431,10 @@ export const controls = {
     description: t('Whether to show other as legend in echarts stack'),
     default: true,
   },
+
+  sort_column: Object.assign({}, groupByControl, {
+    label: t('Sort Column'),
+    description: t('Column to sort. Has greater priority than "Sort By" when specify.'),
+  }),
 };
 export default controls;

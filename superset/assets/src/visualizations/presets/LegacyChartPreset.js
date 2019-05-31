@@ -39,6 +39,7 @@ import EchartsFunnelPlugin from '../EchartsFunnel/index';
 import EchartsLinePlugin from '../EchartsLine/index';
 import EchartsStackPlugin from '../EchartsStack/index';
 import PlotlyMultiLinePlugin from '../PlotlyMultiLine/index';
+import SortTablePlugin from '../SortTable/index';
 
 import CommonChartPreset from './CommonChartPreset';
 import DeckGLChartPreset from './DeckGLChartPreset';
@@ -77,6 +78,7 @@ export default class LegacyChartPreset extends Preset {
         new ParallelCoordinatesChartPlugin().configure({ key: 'para' }),
         new RoseChartPlugin().configure({ key: 'rose' }),
         new SankeyChartPlugin().configure({ key: 'sankey' }),
+        new SortTablePlugin().configure({ key: 'sort_table' }),
         new TimePivotChartPlugin().configure({ key: 'time_pivot' }),
       ],
     });
